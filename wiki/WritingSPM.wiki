@@ -1,0 +1,27 @@
+#summary Writing a satellite processing module (SPM)
+
+The SPM must be a Python module conforming to the following API:
+
+{{{
+
+def desc():
+  res = {}
+  res["id"]
+  res["name"]
+  res["instruments"] = {}
+  res["instruments"]["instr1"] = [ "channel1", "channel2", "channel3" ]
+  return res
+
+def fetch(path):
+  # Download and save telemetry files for every instrument separately to path/instrument/L0/uniquesessionfilename
+  res = {}
+  res["instrument1"] = [ "absolute_filepath1", "absolute_filepath2", "absolute_filepath3" ]
+  res["instrument2"] = [ "absolute_filepath4", "absolute_filepath5", "absolute_filepath6" ]
+  return res
+
+def parse(instrument, path):
+  # Feed the file at the specified absolute path to the appropriate parser function, determined by instrument.
+  # You are free to implement parser functions however you need, but the parse() function must return a specific type of result:
+  return sessionId, data   # Here data is a dictionary of  { datetime : [ channel1_value, channel2_value, channel3_value ] }, and sessionId is a unique session identifier
+
+}}}
