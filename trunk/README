@@ -1,0 +1,64 @@
+0. PREFACE
+
+	The PySatel (Python-Satellite) project is devoted to building a convenient framework for easy management of constellations of multiple scientific satellites, each 
+	carrying multiple different instruments.
+
+	PySatel requires the following Python modules to be installed: ephem by pyephem project, igrf and cxform by python-magnetosphere project, and scipy.
+
+
+
+1. INSTALLATION
+
+	The following steps should be executed as root.
+
+	a. mv pysatel.conf /etc/
+	b. Edit /etc/pysatel.conf to specify correct directories for data and TLE archives, and correct credentials to connect to MySQL
+	c. Log on to your MySQL RDBS and create the appropriate database and user. It should look like this:
+		create database pysatel;
+		grant insert,select,create,drop on pysatel.* to `pysatel` identified by '1234';
+	Make sure the credentials you enter match those specified in the /etc/pysatel.conf file!
+	d. mv pysatel-admin.py /usr/local/bin/
+	e. mkdir -p /usr/local/lib/python2.5/site-packages/pysatel/telemetry
+	f. mv coord.py export.py  process.py /usr/local/lib/python2.5/site-packages/pysatel/
+	g. touch /usr/local/lib/python2.5/site-packages/pysatel/telemetry/__init__.py
+	h. crontab -e
+		@hourly	/usr/local/lib/python2.5/site-packages/pysatel/process.py
+		You can easily specify other cron rules to run the main processing loop instead.
+
+	Installation complete. Supposedly someday we will build proper packages, at least for RHEL and Debian.
+
+
+
+2. WRITING A SATELLITE PROCESSING MODULE (SPM)
+
+	The SPM must be a Python module conforming to the following API:
+
+def desc():
+	res = {}
+	res["id"]
+	res["name"]
+	res["instruments"] = {}
+	res["instruments"]["instr1"] = ( "channel1", "channel2", "channel3" )
+	return res
+
+def fetch(path):
+	# Download and save telemetry files for every instrument separately to path/instrument/L0/uniquesessionfilename
+	res = {}
+	res["instrument1"] = [ "absolute_filepath1", "absolute_filepath2", "absolute_filepath3" ]
+	res["instrument2"] = [ "absolute_filepath4", "absolute_filepath5", "absolute_filepath6" ]
+	return res
+
+def parse(instrument, path):
+	# Feed the file at the specified absolute path to the appropriate parser function, determined by instrument.
+	# You are free to implement parser functions however you need, but the parse() function must return a specific type of result:
+	return sessionId, data   # Here data is a dictionary of  { datetime : ( channel1_value, channel2_value, channel3_value ) }, and sessionId is a unique session identifier
+
+
+
+3. USAGE
+
+	Further information on using pysatel can be obtained by running
+
+		pysatel-admin help
+
+	Thanks for visiting.
