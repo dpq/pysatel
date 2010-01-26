@@ -3,35 +3,21 @@
 	The PySatel (Python-Satellite) project is devoted to building a convenient framework for easy management of constellations of multiple scientific satellites, each 
 	carrying multiple different instruments.
 
-	PySatel requires the following Python modules to be installed: ephem by pyephem project, igrf and cxform by python-magnetosphere project, and scipy.
-
-
+	PySatel requires the following packages to be installed:
+		o mysql
+		o python
+	PySatel requires the following Python modules to be installed:
+		o ephem by pyephem project
+		o igrf and cxform by python-magnetosphere project
+		o and scipy.
 
 1. INSTALLATION
 
-	The following steps should be executed as root.
-
-	a. mv pysatel.conf /etc/
-	b. Edit /etc/pysatel.conf to specify correct directories for data and TLE archives, and correct credentials to connect to MySQL
-	c. Log on to your MySQL RDBS and create the appropriate database and user. It should look like this:
-		create database pysatel;
-		grant insert,select,create,drop on pysatel.* to `pysatel` identified by '1234';
-	Make sure the credentials you enter match those specified in the /etc/pysatel.conf file!
-	d. mv pysatel-admin.py /usr/local/bin/
-	e. mkdir -p /usr/local/lib/python2.5/site-packages/pysatel/telemetry
-	f. mv coord.py export.py  process.py /usr/local/lib/python2.5/site-packages/pysatel/
-	g. touch /usr/local/lib/python2.5/site-packages/pysatel/telemetry/__init__.py
-	h. crontab -e
-		@hourly	/usr/local/lib/python2.5/site-packages/pysatel/process.py
-		You can easily specify other cron rules to run the main processing loop instead.
-
-	Installation complete. Supposedly someday we will build proper packages, at least for RHEL and Debian.
-
-
+	execute the install.sh
 
 2. WRITING A SATELLITE PROCESSING MODULE (SPM)
 
-	The SPM must be a Python module conforming to the following API:
+	The SPM must be a Python module conforming to the following API (you can find a template telemetry file in the directory where pysatel has been downloaded):
 
 def desc():
 	res = {}
@@ -53,12 +39,15 @@ def parse(instrument, path):
 	# You are free to implement parser functions however you need, but the parse() function must return a specific type of result:
 	return sessionId, data   # Here data is a dictionary of  { datetime : ( channel1_value, channel2_value, channel3_value ) }, and sessionId is a unique session identifier
 
-
-
 3. USAGE
+
+	executing from the shell
+	/usr/local/lib/python2.5/site-packages/pysatel/process.py
+	starts the main loop
 
 	Further information on using pysatel can be obtained by running
 
 		pysatel-admin help
 
 	Thanks for visiting.
+	Supposedly someday we will build proper packages, at least for RHEL and Debian.
