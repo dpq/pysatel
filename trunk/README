@@ -50,3 +50,13 @@ def parse(instrument, path):
 
 	Thanks for visiting.
 	Supposedly someday we will build proper packages, at least for RHEL and Debian.
+
+4. UNINSTALLATION
+
+	ATTENTION! If you want to delete the databases with all the content too, uncomment corresponding lines
+
+	If you want just to stop script (delete it from cron), just remove the line
+		@hourly /usr/local/lib/python2.5/site-packages/pysatel/process.py
+	from your local crontab
+
+	make uninstall.sh executable; run it
