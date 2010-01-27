@@ -15,11 +15,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import os
+from scipy import mat, cos, sin, arctan, sqrt, pi, arctan2
+from math import pow, degrees, radians
 from datetime import datetime, timedelta
 from time import mktime
-import os
-from math import pow
-from scipy import mat, cos, sin, arctan, sqrt, degrees, radians, pi, arctan2
 
 def cbrt(x):
 	if x >= 0: 
@@ -101,9 +101,34 @@ def dddmmss2dec(lat, lon):
 	lon = float(lon[0]) + float(lon[1])/60 + float(lon[2])/3600
 	return lat, lon
 
+################################# BETA! REPLACE IT ASAP ##################################
+betaerror = 0
+
+magicdate = datetime(2009, 01, 01, 0, 0, 0)
+try:
+	from aacgm import sfc_convert_geo_coord, mlt
+
+	def invariant(lat, lon, alt):
+		# 07.09.09 crude costyl to convert from (-180, 180) longitudes to (0, 360). Kill this if everything fails
+		if lon < 0:
+			lon = 360 + lon
+		invlat, invlon, i_error = sfc_convert_geo_coord(lat, lon, alt, 1)
+		return float(invlat), float(invlon)
+
+	# Magnetic local time
+	def magneticLocalTime(dt, mlon):
+		Mlt, mslon = mlt(magicdate.year, (dt - magicdate).seconds, mlon)
+		return Mlt
+except:
+	betaerror = 1
+	print "Cannot import sfc_convert_geo_coord from aacgm"
+
+###################################### END OF BETA! ######################################
+
 # Caution: for performance considerations, we only retrieve TLE file once per coord() call, so avoid processing very long time intervals (during which the orbit may
 # significantly drift) with a single call
 def coord(idSatellite, dtList):
+	global betaerror
 	res = []
 	if len(dtList) == 0:
 		return res
@@ -132,10 +157,23 @@ def coord(idSatellite, dtList):
 		x, y, z = cxform.transform("GEO", "MAG", x, y, z, dt.year, dt.month, dt.day, dt.hour, dt.minute, int(round(dt.second + (dt.microsecond + 0.0)/1000)))
 		mlat, mlon = ecef2geodetic(x, y, z)
 
-		# TODO Add CGM, invariant magnetic coords, MLT. Maybe something else.
-		res.append((lat, lon, alt, x, y, z, mlat, mlon, l, b, bx, by, bz, lt))
+		if not betaerror:
+			try:
+				# CGM, invariant magnetic coords, # is there cgm or it is the same as invariant?
+				invlat, invlon = invariant(lat, lon, alt)
+				# MLT
+				MLT = magneticLocalTime(dt, mlon)
+			except:
+				invlat = invlon = MLT = None
+				print "Cannot calculate beta part of coordinates"
+			res.append((lat, lon, alt, x, y, z, mlat, mlon, l, b, bx, by, bz, lt, invlat, invlon, MLT))
+		else:
+			res.append((lat, lon, alt, x, y, z, mlat, mlon, l, b, bx, by, bz, lt))
+	# TODO: something else?
 	return res
 
-
 def header():
-	return "lat", "lon", "alt", "x", "y", "z", "mlat", "mlon", "l", "b", "b_x", "b_y", "b_z", "lt"
+	if not betaerror:
+		return "lat", "lon", "alt", "x", "y", "z", "mlat", "mlon", "l", "b", "b_x", "b_y", "b_z", "lt", "invlat", "invlon", "MLT"
+	else:
+		return "lat", "lon", "alt", "x", "y", "z", "mlat", "mlon", "l", "b", "b_x", "b_y", "b_z", "lt"
