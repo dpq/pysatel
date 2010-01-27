@@ -5,11 +5,10 @@
 
 	PySatel requires the following packages to be installed:
 		o mysql
-		o python
+		o python, python-scipy, python-mysqldb
 	PySatel requires the following Python modules to be installed:
-		o ephem by pyephem project
-		o igrf and cxform by python-magnetosphere project
-		o and scipy.
+		o ephem by pyephem project http://rhodesmill.org/pyephem/
+		o igrf and cxform by python-magnetosphere project https://code.google.com/p/python-magnetosphere/
 
 1. INSTALLATION
 
