@@ -19,9 +19,9 @@ import sys
 from sys import argv
 import os
 import ConfigParser
-import coord
+from pysatel import coord
+import telemetry
 import MySQLdb
-import pysatel.telemetry
 import imp
 
 def help():

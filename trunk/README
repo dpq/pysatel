@@ -10,35 +10,11 @@
 		o ephem by pyephem project http://rhodesmill.org/pyephem/
 		o igrf and cxform by python-magnetosphere project https://code.google.com/p/python-magnetosphere/
 
-1. INSTALLATION
+1. WRITING A SATELLITE PROCESSING MODULE (SPM)
 
-	execute the install.sh
+	The SPM must be a Python module conforming to the cpecial API (you can find a template telemetry file in the directory where pysatel has been downloaded)
 
-2. WRITING A SATELLITE PROCESSING MODULE (SPM)
-
-	The SPM must be a Python module conforming to the following API (you can find a template telemetry file in the directory where pysatel has been downloaded):
-
-def desc():
-	res = {}
-	res["id"]
-	res["name"]
-	res["instruments"] = {}
-	res["instruments"]["instr1"] = ( "channel1", "channel2", "channel3" )
-	return res
-
-def fetch(path):
-	# Download and save telemetry files for every instrument separately to path/instrument/L0/uniquesessionfilename
-	res = {}
-	res["instrument1"] = [ "absolute_filepath1", "absolute_filepath2", "absolute_filepath3" ]
-	res["instrument2"] = [ "absolute_filepath4", "absolute_filepath5", "absolute_filepath6" ]
-	return res
-
-def parse(instrument, path):
-	# Feed the file at the specified absolute path to the appropriate parser function, determined by instrument.
-	# You are free to implement parser functions however you need, but the parse() function must return a specific type of result:
-	return sessionId, data   # Here data is a dictionary of  { datetime : ( channel1_value, channel2_value, channel3_value ) }, and sessionId is a unique session identifier
-
-3. USAGE
+2. USAGE
 
 	executing from the shell
 	/usr/local/lib/python2.5/site-packages/pysatel/process.py
@@ -51,7 +27,7 @@ def parse(instrument, path):
 	Thanks for visiting.
 	Supposedly someday we will build proper packages, at least for RHEL and Debian.
 
-4. UNINSTALLATION
+3. UNINSTALLATION
 
 	ATTENTION! If you want to delete the databases with all the content too, uncomment corresponding lines
 
