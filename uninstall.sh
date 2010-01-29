@@ -8,7 +8,7 @@ PSW=`cat /etc/pysatel.conf | grep mysqlpassword | sed s/mysqlpassword// | sed s/
 #mysql --user=root -p --execute="drop database $DBNAME; drop user $USERNAME";
 
 echo This script asked you to let it operate as root.
-sudo rm -rf /usr/local/lib/python2.5/site-packages/pysatel
+sudo rm -rf /usr/local/lib/python2.5/site-packages/pysatel/ /var/log/pysatel/
 sudo rm /usr/local/bin/pysatel-admin.py /etc/pysatel.conf LICENSE README telemetry-template.py uninstall.sh
 echo You should remove from crontab this line: @hourly /usr/local/lib/python2.5/site-packages/pysatel/process.py
 echo Deinstallation completed successfully.

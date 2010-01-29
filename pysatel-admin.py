@@ -20,7 +20,7 @@ from sys import argv
 import os
 import ConfigParser
 from pysatel import coord
-import telemetry
+from pysatel import telemetry
 import MySQLdb
 import imp
 
@@ -96,7 +96,7 @@ def create(src):
 			cols = "dt_record datetime, microsec int(11), " + header
 			cur.execute("create table %s.`%s_%s` (%s)"%(config.get("Main", "MysqlDatabase"), satelliteName, i, cols))
 
-		link = os.path.join(os.path.dirname(pysatel.telemetry.__file__), satelliteName + ".py")
+		link = os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py")
 		if not os.path.exists(link):
 			os.symlink(os.path.abspath(src), link)
 
@@ -112,7 +112,7 @@ def delete(satelliteName):
 	config.read(os.path.join("/etc/pysatel.conf"))
 	dst = os.path.join(config.get("Main", "ArchivePath"), satelliteName)
 
-	globals()["satellite"] = imp.load_source("satellite", os.path.join(os.path.dirname(pysatel.telemetry.__file__), satelliteName + ".py"))
+	globals()["satellite"] = imp.load_source("satellite", os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py"))
 	instruments = []
 	map(lambda i : len(globals()["satellite"].desc()["instruments"][i]) > 0 and instruments.append(i) or None, globals()["satellite"].desc()["instruments"].keys())
 	tables = []
@@ -147,7 +147,7 @@ def activate(src):
 	module = globals()["satellite"]
 	satelliteName = module.desc()["name"]
 
-	link = os.path.join(os.path.dirname(pysatel.telemetry.__file__), satelliteName + ".py")
+	link = os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py")
 	if not os.path.exists(link):
 		os.symlink(os.path.abspath(src), link)
 	else:
@@ -156,7 +156,7 @@ def activate(src):
 
 
 def deactivate(satelliteName):
-	link = os.path.join(os.path.dirname(pysatel.telemetry.__file__), satelliteName + ".py")
+	link = os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py")
 	if os.path.exists(link) and os.path.islink(link):
 		os.remove(link)
 	else:

@@ -18,9 +18,10 @@
 import os
 import imp
 from sys import argv
-from pysatel import coord
-from pysatel import export
-import telemetry
+import pysatel
+import pysatel.export
+import pysatel.coord
+from pysatel import telemetry
 
 # Compose the list of satellites that must be processed
 res = []
