@@ -102,19 +102,26 @@ def dddmmss2dec(lat, lon):
 	return lat, lon
 
 ################################# BETA! REPLACE IT ASAP ##################################
+betaerror = 0
+
 magicdate = datetime(2009, 01, 01, 0, 0, 0)
 try:
 	from aacgm import sfc_convert_geo_coord, mlt
 
 	def invariant(lat, lon, alt):
+		# 07.09.09 crude costyl to convert from (-180, 180) longitudes to (0, 360). Kill this if everything fails
+		if lon < 0:
+			lon = 360 + lon
 		invlat, invlon, i_error = sfc_convert_geo_coord(lat, lon, alt, 1)
 		return float(invlat), float(invlon)
 
+	# Magnetic local time
 	def magneticLocalTime(dt, mlon):
 		Mlt, mslon = mlt(magicdate.year, (dt - magicdate).seconds, mlon)
 		return Mlt
 except:
-	print "Cannot import sfc_convert_geo_coord, mlt from aacgm"
+	betaerror = 1
+	print "Cannot import sfc_convert_geo_coord from aacgm"
 
 ###################################### END OF BETA! ######################################
 
@@ -150,17 +157,23 @@ def coord(idSatellite, dtList):
 		x, y, z = cxform.transform("GEO", "MAG", x, y, z, dt.year, dt.month, dt.day, dt.hour, dt.minute, int(round(dt.second + (dt.microsecond + 0.0)/1000)))
 		mlat, mlon = ecef2geodetic(x, y, z)
 
-		try:
-			# CGM, invariant magnetic coords, # is there cgm or it is the same as invariant?
-			invlat, invlon = invariant(lat, lon, alt)
-			# MLT
-			MLT = magneticLocalTime(dt, mlon)
-		except:
-			invlat = invlon = MLT = None
-			print "Cannot calculate beta part of coordinates"
-		res.append((lat, lon, alt, x, y, z, mlat, mlon, l, b, bx, by, bz, lt, invlat, invlon, MLT))
+		if not betaerror:
+			try:
+				# CGM, invariant magnetic coords, # is there cgm or it is the same as invariant?
+				invlat, invlon = invariant(lat, lon, alt)
+				# MLT
+				MLT = magneticLocalTime(dt, mlon)
+			except:
+				invlat = invlon = MLT = None
+				print "Cannot calculate beta part of coordinates"
+			res.append((lat, lon, alt, x, y, z, mlat, mlon, l, b, bx, by, bz, lt, invlat, invlon, MLT))
+		else:
+			res.append((lat, lon, alt, x, y, z, mlat, mlon, l, b, bx, by, bz, lt))
 	# TODO: something else?
 	return res
 
 def header():
-	return "lat", "lon", "alt", "x", "y", "z", "mlat", "mlon", "l", "b", "b_x", "b_y", "b_z", "lt", "invlat", "invlon", "MLT"
+	if not betaerror:
+		return "lat", "lon", "alt", "x", "y", "z", "mlat", "mlon", "l", "b", "b_x", "b_y", "b_z", "lt", "invlat", "invlon", "MLT"
+	else:
+		return "lat", "lon", "alt", "x", "y", "z", "mlat", "mlon", "l", "b", "b_x", "b_y", "b_z", "lt"
