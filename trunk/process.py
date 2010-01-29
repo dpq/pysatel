@@ -41,6 +41,7 @@ for satellite in res:
 	module = globals()["telemetry.%s"%satellite]
 	satelliteId, satelliteName = module.desc()["id"], module.desc()["name"]
 	files = module.fetch(config.get("Main", "ArchivePath"))
+	print satellite, files
 	for instrumentName in files.keys():
 		for f in files[instrumentName]:
 			sessionId, data = module.parse(instrumentName, f)
@@ -50,5 +51,7 @@ for satellite in res:
 			final = []
 			for k in sorted(result.keys()):
 				final.append((k,) + tuple(map(lambda s : str(s), result[k])))
+			print satelliteName, instrumentName, sessionId, header
+			#for ff in final):
 			e.filesys(satelliteName, instrumentName, sessionId, header, final)
 			e.mysql(satelliteName, instrumentName, sessionId, header, final)

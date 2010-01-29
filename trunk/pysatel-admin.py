@@ -93,7 +93,7 @@ def create(src):
 		if len(instruments[i]) > 0:
 			header = coord.header()
 			header = ', '.join(map(lambda x: "`%s` float"%x, header +  instruments[i]))
-			cols = "dt_record datetime, microsec int(11), " + header
+			cols = "dt_record datetime, microsec int(11) default 0, " + header
 			cur.execute("create table %s.`%s_%s` (%s)"%(config.get("Main", "MysqlDatabase"), satelliteName, i, cols))
 
 		link = os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py")

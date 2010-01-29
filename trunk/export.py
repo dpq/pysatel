@@ -38,15 +38,22 @@ class export:
 		table = "`%s_%s`"%(satellite, instrument)
 		columns = ",".join(header)
 		placeholders = ("%s,"*len(header))[:-1]
+		duplicates = 0
 		for r in records:
+#			print "ins = \n", "insert into " + table + " (" + columns + ") values (" + placeholders + ")"
+#			print "r = \n", r
+			insStr = ("insert into " + table + " (" + columns + ") values (" + placeholders + ")")%(r)
+#			exit()
 			try:
 				self.cur.execute("insert into " + table + " (" + columns + ") values (" + placeholders + ")", r)
 			except MySQLdb.MySQLError, (errno, strerror):
-				pass
-				#if errno != DUPLICATE_ENTRY_ERROR:
-				#	canNotInsert += str(errno) + " (" + insSmallStr + ";) " + strerror + "\n"
-				#else:
-				#	duplicates += 1
+#				pass
+				if errno != DUPLICATE_ENTRY_ERROR:
+					# canNotInsert += str(errno) + " (" + insSmallStr + ";) " + strerror + "\n"
+					print "cannot insert\n", str(errno) + " (" + insStr + ";) " + strerror + "\n"
+				else:
+					duplicates += 1
+		print duplicates, "duplicate(s)"
 		return
 
 	def filesys(self, satellite, instrument, session, header, records):
