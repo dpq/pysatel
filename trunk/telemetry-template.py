@@ -8,8 +8,15 @@ def desc():
 	res["instruments"]["instr1"] = ( "channel1", "channel2", "channel3" )
 	return res
 
-def fetch(path):
-	# Download and save telemetry files for every instrument separately to path/instrument/L0/unique_session_file_name
+def fetch(dst):
+	# Download and save telemetry files for every instrument separately to dst/instrument/L0/unique_session_file_name
+	res = {}
+	res["instrument1"] = [ "absolute_filepath1", "absolute_filepath2", "absolute_filepath3" ]
+	res["instrument2"] = [ "absolute_filepath4", "absolute_filepath5", "absolute_filepath6" ]
+	return res
+
+def replenish(src, dst):
+	# Get telemetry files for every instrument separately from the given source path to dst/instrument/L0/unique_session_file_name
 	res = {}
 	res["instrument1"] = [ "absolute_filepath1", "absolute_filepath2", "absolute_filepath3" ]
 	res["instrument2"] = [ "absolute_filepath4", "absolute_filepath5", "absolute_filepath6" ]

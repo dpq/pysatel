@@ -17,7 +17,6 @@
 """
 import os
 import imp
-from sys import argv
 import pysatel
 import pysatel.export
 import pysatel.coord
@@ -35,13 +34,8 @@ config = ConfigParser.SafeConfigParser()
 config.read(os.path.join("/etc/pysatel.conf"))
 e = pysatel.export.export(config.get("Main", "ArchivePath"), config.get("Main", "MysqlHost"), config.get("Main", "MysqlUser"), config.get("Main", "MysqlPassword"), config.get("Main", "MysqlDatabase"))
 
-# Parse every instrument of every satellite, append coordinates and write the resulting output to filesystem and MySQL database
-for satellite in res:
-	globals()["telemetry.%s"%satellite] = imp.load_source(satellite, os.path.join(os.path.dirname(pysatel.__file__), "telemetry", "%s.py"%satellite))
-	module = globals()["telemetry.%s"%satellite]
+def processAll(module, files):
 	satelliteId, satelliteName = module.desc()["id"], module.desc()["name"]
-	files = module.fetch(config.get("Main", "ArchivePath"))
-	print satellite, files
 	for instrumentName in files.keys():
 		for f in files[instrumentName]:
 			sessionId, data = module.parse(instrumentName, f)
@@ -51,7 +45,13 @@ for satellite in res:
 			final = []
 			for k in sorted(result.keys()):
 				final.append((k,) + tuple(map(lambda s : str(s), result[k])))
-			print satelliteName, instrumentName, sessionId, header
-			#for ff in final):
 			e.filesys(satelliteName, instrumentName, sessionId, header, final)
 			e.mysql(satelliteName, instrumentName, sessionId, header, final)
+
+
+# Parse every instrument of every satellite, append coordinates and write the resulting output to filesystem and MySQL database
+for satellite in res:
+	globals()["telemetry.%s"%satellite] = imp.load_source(satellite, os.path.join(os.path.dirname(pysatel.__file__), "telemetry", "%s.py"%satellite))
+	module = globals()["telemetry.%s"%satellite]
+	files = module.fetch(config.get("Main", "ArchivePath"))
+	processAll(module, files)
