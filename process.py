@@ -32,7 +32,7 @@ for x in os.listdir(os.path.join(os.path.dirname(pysatel.__file__), "telemetry")
 import ConfigParser
 config = ConfigParser.SafeConfigParser()
 config.read(os.path.join("/etc/pysatel.conf"))
-e = pysatel.export.export(config.get("Main", "ArchivePath"), config.get("Main", "MysqlHost"), config.get("Main", "MysqlUser"), config.get("Main", "MysqlPassword"), config.get("Main", "MysqlDatabase"))
+e = pysatel.export.export(config.get("Main", "ArchivePath"))
 
 def processAll(module, files):
 	satelliteId, satelliteName = module.desc()["id"], module.desc()["name"]
@@ -46,7 +46,7 @@ def processAll(module, files):
 			for k in sorted(result.keys()):
 				final.append((k,) + tuple(map(lambda s : str(s), result[k])))
 			e.filesys(satelliteName, instrumentName, sessionId, header, final)
-			e.mysql(satelliteName, instrumentName, sessionId, header, final)
+			e.database(satelliteName, instrumentName, sessionId, header, final)
 
 
 # Parse every instrument of every satellite, append coordinates and write the resulting output to filesystem and MySQL database
