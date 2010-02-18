@@ -19,9 +19,9 @@ import sys
 from sys import argv
 import os
 import ConfigParser
-from pysatel import coord
-from pysatel import telemetry
-import MySQLdb
+from pysatel import coord, telemetry
+from pysatel.dbdriver import Db
+
 import imp
 
 def help():
@@ -49,7 +49,13 @@ def help():
 	print "\tTemporarily remove the SPM of the specified satellite from the processing loop. No harm is done, only a single symlink is removed. All data files are intact."
 	return
 
-
+class MyConfig(ConfigParser.SafeConfigParser):
+	def getValue(self, section, option, raw=False, vars=None):
+		try:
+			result = self.get(section, option, raw, vars)
+		except:
+			return None
+		return result
 
 def __checkdir(dir):
 	if not os.path.exists(dir):
@@ -59,25 +65,20 @@ def __checkdir(dir):
 		return False
 	return True
 
-
-
 # TODO optimize and add error handling and recreation procedure
 def create(src):
 	globals()["satellite"] = imp.load_source("satellite", src)
 	module = globals()["satellite"]
 
 	satelliteName, instruments = module.desc()["name"], module.desc()["instruments"]
-	config = ConfigParser.SafeConfigParser()
+	config = MyConfig()
 	config.read(os.path.join("/etc/pysatel.conf"))
 
-	uid, gid = int(config.get("Main", "uid")), int(config.get("Main", "gid"))
-	dst = os.path.join(config.get("Main", "ArchivePath"), satelliteName)
+	uid, gid = int(config.getValue("Main", "uid")), int(config.getValue("Main", "gid"))
+	dst = os.path.join(config.getValue("Main", "ArchivePath"), satelliteName)
 	if not __checkdir(dst):
 		return
 	os.chown(dst, uid, gid)
-
-	conn = MySQLdb.connect(config.get("Main", "MysqlHost"), config.get("Main", "MysqlUser"), config.get("Main", "MysqlPassword"), config.get("Main", "MysqlDatabase"))
-	cur = conn.cursor()
 
 	for i in instruments.keys():
 		if not __checkdir(os.path.join(dst, i)):
@@ -90,34 +91,33 @@ def create(src):
 		os.chown(os.path.join(dst, i, "L1"), uid, gid)
 		os.chown(os.path.join(dst, i, "L2"), uid, gid)
 
-		if len(instruments[i]) > 0:
-			header = coord.header()
-			header = ', '.join(map(lambda x: "`%s` float"%x, header +  instruments[i]))
-			cols = "dt_record datetime, microsec int(11) default 0, " + header
-			cur.execute("create table %s.`%s_%s` (%s)"%(config.get("Main", "MysqlDatabase"), satelliteName, i, cols))
+	for conn in config.getValue("Database", "connections").replace(" ", "").replace("\t", "").split(","):
+		db = Db(config.getValue(conn, "DatabaseType"), {"host" : config.getValue(conn, "Host"), "db" : config.getValue(conn, "Database"), "user" : config.getValue(conn, "User"), "passwd" : config.getValue(conn, "Password"), "tns" : config.getValue(conn, "TnsName")})
+		for i in instruments.keys():
+			if len(instruments[i]) > 0:
+				dtcols = [("dt_record" , {"type" : "datetime", "NOT" : "NULL"}), ("microsec" , {"type" : "int", "default" : "0"})]
+				# dtcols = (("dt_record", {"type": "decimal(16,6)" }))
+				thecols = map(lambda cl : (cl, {"type" : "float", "default" : "NULL"}), coord.header() + instruments[i])
+				prikey = "dt_record"
+				db.createTable(table = "%s_%s"%(satelliteName, i), cols = dict(dtcols + thecols), primarykey = prikey)
 
-		link = os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py")
-		if not os.path.exists(link):
-			os.symlink(os.path.abspath(src), link)
-
-	cur.close()
-	conn.close()
-
-
+	link = os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py")
+	if not os.path.exists(link):
+		os.symlink(os.path.abspath(src), link)
 
 from shutil import rmtree
 
 def delete(satelliteName):
-	config = ConfigParser.SafeConfigParser()
+	config = MyConfig()
 	config.read(os.path.join("/etc/pysatel.conf"))
-	dst = os.path.join(config.get("Main", "ArchivePath"), satelliteName)
+	dst = os.path.join(config.getValue("Main", "ArchivePath"), satelliteName)
 
 	globals()["satellite"] = imp.load_source("satellite", os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py"))
 	instruments = []
 	map(lambda i : len(globals()["satellite"].desc()["instruments"][i]) > 0 and instruments.append(i) or None, globals()["satellite"].desc()["instruments"].keys())
 	tables = []
 	for i in instruments:
-		tables.append("%s.`%s_%s`"%(config.get("Main", "MysqlDatabase"), satelliteName, i))
+		tables.append("%s_%s"%(satelliteName, i))
 
 	passphrase = 'Yes, I am aware that this is a very bad idea'
 	print "This action will completely erase directory %s and all files and subdirectories in it."%dst
@@ -131,16 +131,13 @@ def delete(satelliteName):
 	if os.path.exists(dst) and os.path.isdir(dst):
 		rmtree(dst)
 
-	conn = MySQLdb.connect(config.get("Main", "MysqlHost"), config.get("Main", "MysqlUser"), config.get("Main", "MysqlPassword"), config.get("Main", "MysqlDatabase"))
-	cur = conn.cursor()
-	for t in tables:
-		cur.execute("drop table %s"%t)
-	cur.close()
-	conn.close()
+	for conn in config.getValue("Database", "connections").replace(" ", "").replace("\t", "").split(","):
+		db = Db(config.getValue(conn, "DatabaseType"), {"host" : config.getValue(conn, "Host"), "db" : config.getValue(conn, "Database"), "user" : config.getValue(conn, "User"), "passwd" : config.getValue(conn, "Password"), "tns" : config.getValue(conn, "TnsName")})
+		for t in tables:
+			db.dropTable(t)
 
 	print "Done. You can start hitting your head against the wall if you didn't mean it."
 	return
-
 
 def activate(src):
 	globals()["satellite"] = imp.load_source("satellite", src)
@@ -152,8 +149,6 @@ def activate(src):
 		os.symlink(os.path.abspath(src), link)
 	else:
 		print "Error: ", link, "exists."
-		
-
 
 def deactivate(satelliteName):
 	link = os.path.join(os.path.dirname(telemetry.__file__), satelliteName + ".py")
@@ -162,7 +157,6 @@ def deactivate(satelliteName):
 	else:
 		print "Error: ", link, "is not a symbolic link"
 
-
 from os import listdir, path
 
 def replenish(satelliteName, src):
@@ -170,7 +164,6 @@ def replenish(satelliteName, src):
 	for i in listdir(src):
 		res[i] = map(lambda f : path.abspath(path.join(src, i, f)), listdir(path.join(src, i)))
 	return res
-
 
 if __name__ == "__main__":
 	if len(argv) == 1:

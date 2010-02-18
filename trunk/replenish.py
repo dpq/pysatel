@@ -27,7 +27,7 @@ from pysatel import telemetry
 import ConfigParser
 config = ConfigParser.SafeConfigParser()
 config.read(os.path.join("/etc/pysatel.conf"))
-e = pysatel.export.export(config.get("Main", "ArchivePath"), config.get("Main", "MysqlHost"), config.get("Main", "MysqlUser"), config.get("Main", "MysqlPassword"), config.get("Main", "MysqlDatabase"))
+e = pysatel.export.export(config.get("Main", "ArchivePath"))
 
 from pysatel.process import processAll
 
