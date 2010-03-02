@@ -18,7 +18,26 @@
 
 	executing from the shell
 	/usr/local/lib/python2.5/site-packages/pysatel/process.py
-	starts the main loop
+
+	process.py - starts main cycle for each registred satellite
+		o fetching
+		o saving each instrument separately
+		o parsing
+		o saving parsed
+		o saving to database
+	process.py name - starts main cycle for satellite with given name
+
+	process.py name processBinary - it supposed that we already fetch and save binary files
+	process.py name L0 is the synonym for processBinary
+		o parsing
+		o saving parsed
+		o saving to database
+
+	process.py name saveToTxtAndDb - it supposed that we've already parsed fetched files
+	process.py name L1 is the synonym for saveToTxtAndDb
+		o saving to database
+
+	process.py name path/to/files - replenish selected satellite with the files from given directory
 
 	Further information on using pysatel can be obtained by running
 
