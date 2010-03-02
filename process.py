@@ -22,12 +22,6 @@ import pysatel.export
 import pysatel.coord
 from pysatel import telemetry
 
-# Compose the list of satellites that must be processed
-res = []
-for x in os.listdir(os.path.join(os.path.dirname(pysatel.__file__), "telemetry")):
-	if x.endswith(".py") and x != "__init__.py":
-		res.append(".".join(x.split(".")[:-1]))
-
 # Read the config file and create the exporter
 import ConfigParser
 config = ConfigParser.SafeConfigParser()
@@ -48,10 +42,26 @@ def processAll(module, files):
 			e.filesys(satelliteName, instrumentName, sessionId, header, final)
 			e.database(satelliteName, instrumentName, sessionId, header, final)
 
+mode = "fetch"
+res = [] # not result but resource :)
+
+if len(argv) > 2:
+	pathToBinFiles = argv[2]
+	mode = "replenish"
+if len(argv) > 1:
+	res = [argv[1]]
+else:
+	# Compose the list of satellites that must be processed
+	for x in os.listdir(os.path.join(os.path.dirname(pysatel.__file__), "telemetry")):
+		if x.endswith(".py") and x != "__init__.py":
+			res.append(".".join(x.split(".")[:-1]))
 
 # Parse every instrument of every satellite, append coordinates and write the resulting output to filesystem and MySQL database
 for satellite in res:
 	globals()["telemetry.%s"%satellite] = imp.load_source(satellite, os.path.join(os.path.dirname(pysatel.__file__), "telemetry", "%s.py"%satellite))
 	module = globals()["telemetry.%s"%satellite]
-	files = module.fetch(config.get("Main", "ArchivePath"))
+	if mode == "fetch":
+		files = module.fetch(config.get("Main", "ArchivePath"))
+	else: # "replenish"
+		files = module.replenish(pathToBinFiles, config.get("Main", "ArchivePath"))
 	processAll(module, files)
