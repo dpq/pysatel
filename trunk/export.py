@@ -47,9 +47,9 @@ class export:
 		columns = ",".join(header)
 		placeholders = ("%s,"*len(header))[:-1]
 		duplicates = {}
-		for conn in self.config.getValue"Database", "connections").replace(" ", "").replace("\t", "").split(","):
+		for conn in self.config.getValue("Database", "connections").replace(" ", "").replace("\t", "").split(","):
 			# TODO : what does config parser do if no keyword found?
-			db = Db(self.config.getValueconn, "DatabaseType"), {"host" : self.config.getValueconn, "Host"), "db" : self.config.getValueconn, "Database"), "user" : self.config.getValueconn, "User"), "passwd" : self.config.getValueconn, "Password"), "tns" : self.config.getValueconn, "TnsName")})
+			db = Db(self.config.getValue(conn, "DatabaseType"), {"host" : self.config.getValue(conn, "Host"), "db" : self.config.getValue(conn, "Database"), "user" : self.config.getValue(conn, "User"), "passwd" : self.config.getValue(conn, "Password"), "tns" : self.config.getValue(conn, "TnsName")})
 			duplicates[conn] = db.insert(table, columns, records)
 		return duplicates # dict of duplicates
 
