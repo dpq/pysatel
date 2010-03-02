@@ -17,6 +17,7 @@
 """
 from pysatel.dbdriver import Db
 import os
+from datetime import datetime, timedelta
 DUPLICATE_ENTRY_ERROR = 1062
 
 # Read the config file
@@ -42,23 +43,24 @@ class export:
 		return
 
 	def database(self, satellite, instrument, session, header, records):
-		header = map(lambda h : "`%s`"%h, header)
+		if len(records) == 0:
+			print "V DATABASE len(rec) == 0 :((("
 		table = "%s_%s"%(satellite, instrument)
-		columns = ",".join(header)
-		placeholders = ("%s,"*len(header))[:-1]
 		duplicates = {}
 		for conn in self.config.getValue("Database", "connections").replace(" ", "").replace("\t", "").split(","):
+			dtStart = datetime.now()
 			# TODO : what does config parser do if no keyword found?
 			db = Db(self.config.getValue(conn, "DatabaseType"), {"host" : self.config.getValue(conn, "Host"), "db" : self.config.getValue(conn, "Database"), "user" : self.config.getValue(conn, "User"), "passwd" : self.config.getValue(conn, "Password"), "tns" : self.config.getValue(conn, "TnsName")})
-			duplicates[conn] = db.insert(table, columns, records)
+			duplicates[conn] = db.insert(table, header, records)
+			print conn, datetime.now() - dtStart
 		return duplicates # dict of duplicates
 
 	def filesys(self, satellite, instrument, session, header, records):
 		dst = os.path.join(self.path, satellite, instrument, "L1", session + ".xt")
 		file = open(dst, "w")
 		file.write("\t".join(header) + "\n")
-		for r in records:
-			r = map(lambda entry : str(entry), r)
+		for r in sorted(records.keys()):
+			r = [r] + map(lambda entry : str(entry), records[r])
 			file.write("\t".join(r) + "\n")
 		file.close()
 		return
