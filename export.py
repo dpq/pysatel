@@ -57,6 +57,7 @@ class export:
 
 	def filesys(self, satellite, instrument, session, header, records):
 		dst = os.path.join(self.path, satellite, instrument, "L1", session + ".xt")
+		print "Saving to", dst
 		file = open(dst, "w")
 		file.write("\t".join(header) + "\n")
 		for r in sorted(records.keys()):

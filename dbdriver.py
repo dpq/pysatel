@@ -60,7 +60,7 @@ class Db:
 				self.cursor.executemany(None, valueslists)
 				self.conn.commit()
 			except cx_Oracle.Error, strerror:
-				print strerror
+				print strerror[:-1]
 		elif self.type == "mysql":
 			columns = ",".join(header)
 			placeholders = ("%s,"*len(header))[:-1]
