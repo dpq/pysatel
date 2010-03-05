@@ -21,6 +21,7 @@ import pysatel
 import pysatel.export
 import pysatel.coord
 from pysatel import telemetry
+from datetime import datetime
 
 # Read the config file and create the exporter
 import ConfigParser
@@ -90,6 +91,7 @@ for satellite in res:
 		instruments = files.keys()
 
 	for instrumentName in instruments:
+		dtStart = datetime.now()
 		if mode == "saveToDatabase":
 			path = os.path.join(config.get("Main", "ArchivePath"), satelliteName, instrumentName, "L1")
 			files = { instrumentName : map(lambda f : os.path.join(path, f), os.listdir(path)) }
@@ -100,7 +102,7 @@ for satellite in res:
 			if mode != "saveToDatabase":
 
 				###############################################
-				print "Step 1: Parsing file", f
+				print "\nStep 1: Parsing file", f
 				###############################################
 				sessionId, data = module.parse(instrumentName, f)
 
@@ -128,3 +130,5 @@ for satellite in res:
 			print "Step 4: saving to databases ..."
 			###############################################
 			e.database(satelliteName, instrumentName, sessionId, header, final)
+		print "Time spent :", datetime.now() - dtStart
+
