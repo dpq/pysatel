@@ -79,8 +79,7 @@ for satellite in res:
 	if mode == "fetch":
 		files = module.fetch(config.get("Main", "ArchivePath"))
 	elif mode == "replenish":
-		if files == None: files = []
-		files += module.replenish(pathToBinFiles, config.get("Main", "ArchivePath"))
+		files = module.replenish(pathToBinFiles, config.get("Main", "ArchivePath"))
 	elif mode == "processBinary":
 		if files == None:
 			files = totalFileLists(satellite, level = 0)
@@ -90,21 +89,26 @@ for satellite in res:
 	else:
 		instruments = files.keys()
 
+	if len(instruments) == 0:
+		print datetime.now().strftime("%d %b, %Y %H:%M:%S"), "No new telemetry from " + satellite
 	for instrumentName in instruments:
 		dtStart = datetime.now()
 		if mode == "saveToDatabase":
 			path = os.path.join(config.get("Main", "ArchivePath"), satelliteName, instrumentName, "L1")
 			files = { instrumentName : map(lambda f : os.path.join(path, f), os.listdir(path)) }
 		for f in files[instrumentName]:
-
+			print "Processing ", f
 			final = []
-			header = ("dt_record",) + module.desc()["instruments"][instrumentName] + pysatel.coord.header()
+			header = ("dt_record",) + tuple(module.desc()["instruments"][instrumentName]) + pysatel.coord.header()
 			if mode != "saveToDatabase":
 
 				###############################################
-				print "\nStep 1: Parsing file", f
+				print "\nStep 1: Parsing file"
 				###############################################
 				sessionId, data = module.parse(instrumentName, f)
+				if len(data) == 0:
+					print "No records; skipped."
+					continue
 
 				###############################################
 				print "Step 2: calculating coordinates"

@@ -50,8 +50,15 @@ class export:
 		for conn in self.config.getValue("Database", "connections").replace(" ", "").replace("\t", "").split(","):
 			dtStart = datetime.now()
 			# TODO : what does config parser do if no keyword found?
-			db = Db(self.config.getValue(conn, "DatabaseType"), {"host" : self.config.getValue(conn, "Host"), "db" : self.config.getValue(conn, "Database"), "user" : self.config.getValue(conn, "User"), "passwd" : self.config.getValue(conn, "Password"), "tns" : self.config.getValue(conn, "TnsName")})
-			duplicates[conn] = db.insert(table, header, records)
+			dbparams = {"host" : self.config.getValue(conn, "Host"), "db" : self.config.getValue(conn, "Database"), "user" : self.config.getValue(conn, "User"), "passwd" : self.config.getValue(conn, "Password"), "tns" : self.config.getValue(conn, "TnsName")}
+			try:
+				db = Db(self.config.getValue(conn, "DatabaseType"), dbparams)
+			except:
+				print conn, "error: cannot connect to database (%s)"%str(dbparams)
+			try:
+				duplicates[conn] = db.insert(table, header, records)
+			except:
+				print conn, "error: cannot insert data ===========================\n%s============================\n"%str(records)
 			print conn, datetime.now() - dtStart
 		return duplicates # dict of duplicates
 
