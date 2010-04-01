@@ -5,6 +5,7 @@ usage:
 db = Db("$TYPE", {"host" : , "db" : , "user" : , "passwd"})
 """
 
+import os
 import cx_Oracle
 import MySQLdb
 from MySQLdb import MySQLError
@@ -22,6 +23,7 @@ class Db:
 		}
 		self.type = dbtype
 		if self.type == "oracle":
+			print 'self.conn = cx_Oracle.connect(' + "%s/%s@%s"%(params["user"], params["passwd"], params["tns"]) + ')'
 			self.conn = cx_Oracle.connect("%s/%s@%s"%(params["user"], params["passwd"], params["tns"]))
 			self.maxAllowedPacked = 1024*1024 # TODO
 		elif self.type == "mysql":
@@ -64,6 +66,7 @@ class Db:
 		elif self.type == "mysql":
 			columns = ",".join(header)
 			placeholders = ("%s,"*len(header))[:-1]
+			trying = 0
 			try:
 				maxRows = self.maxAllowedPacked / len(" ".join(map(lambda v : str(v), valueslists[0]))) / 2
 				i = 0
@@ -71,7 +74,23 @@ class Db:
 					self.cursor.executemany("insert into `" + table + "` ("+columns+") values ("+placeholders+")", valueslists[i:i+maxRows])
 					i += maxRows
 			except MySQLError, strerror:
-				print "MySQLError :", strerror
+				print "MySQLError :", strerror, "trying ..."
+				trying = 1
+			if trying:
+				print "Trying row by row... (", len(valueslists), ") rows" 
+				for i in range(len(valueslists)):
+					try:
+#						print  "insert into `%s` (%s) values (%s)"%(table, columns, )
+#						print len(placeholders.split("s")), placeholders
+#						print len(valueslists[i])
+						print "insert into `" + table + "` ("+columns+") values ('%s',"%(valueslists[0]) + placeholders[:-2]%(",".join(valueslists[i][1:]))+");"
+						self.cursor.execute(("insert into `" + table + "` ("+columns+") values ("+placeholders+");")%valueslists[i])
+					except MySQLError, strerror:
+						print "MySQLError :", strerror
+#						1/0
+					except:
+						pass
+#			2/0
 		return 0
 
 	def __del__(self):
