@@ -23,52 +23,53 @@ DUPLICATE_ENTRY_ERROR = 1062
 # Read the config file
 import ConfigParser
 class MyConfig(ConfigParser.SafeConfigParser):
-	def getValue(self, section, option, raw=False, vars=None):
-		try:
-			result = self.get(section, option, raw, vars)
-		except:
-			return None
-		return result
+    def getValue(self, section, option, raw=False, vars=None):
+        try:
+        result = self.get(section, option, raw, vars)
+        except:
+        return None
+        return result
 
 class export:
-	def __init__(self, path):
-		self.path = path
-		self.config = MyConfig()
-		self.config.read(os.path.join("/etc/pysatel.conf"))
-
-	def stdout(self, satellite, instrument, session, header, records):
-		for r in records:
-			r = map(lambda entry : str(entry), r)
-			print "\t".join(r)
-		return
-
-	def database(self, satellite, instrument, session, header, records):
-		if len(records) == 0:
-			print "V DATABASE len(rec) == 0 :((("
-		table = "%s_%s"%(satellite, instrument)
-		duplicates = {}
-		for conn in self.config.getValue("Database", "connections").replace(" ", "").replace("\t", "").split(","):
-			dtStart = datetime.now()
-			# TODO : what does config parser do if no keyword found?
-			dbparams = {"host" : self.config.getValue(conn, "Host"), "db" : self.config.getValue(conn, "Database"), "user" : self.config.getValue(conn, "User"), "passwd" : self.config.getValue(conn, "Password"), "tns" : self.config.getValue(conn, "TnsName")}
-			try:
-				db = Db(self.config.getValue(conn, "DatabaseType"), dbparams)
-			except:
-				print conn, "error: cannot connect to database (%s)"%str(dbparams)
-			try:
-				duplicates[conn] = db.insert(table, header, records)
-			except:
-				print conn, "error: cannot insert data ===========================\n%s============================\n"%str(records)
-			print conn, datetime.now() - dtStart
-		return duplicates # dict of duplicates
-
-	def filesys(self, satellite, instrument, session, header, records):
-		dst = os.path.join(self.path, satellite, instrument, "L1", session + ".xt")
-		print "Saving to", dst
-		file = open(dst, "w")
-		file.write("\t".join(header) + "\n")
-		for r in sorted(records.keys()):
-			r = [r] + map(lambda entry : str(entry), records[r])
-			file.write("\t".join(r) + "\n")
-		file.close()
-		return
+    def __init__(self, path):
+        self.path = path
+        self.config = MyConfig()
+        self.config.read(os.path.join("/etc/pysatel.conf"))
+    
+    def stdout(self, satellite, instrument, session, header, records):
+        for r in records:
+        r = map(lambda entry : str(entry), r)
+        print "\t".join(r)
+        return
+    
+    def database(self, satellite, instrument, session, header, records):
+        if len(records) == 0:
+        print "V DATABASE len(rec) == 0 :((("
+        table = "%s_%s"%(satellite, instrument)
+        duplicates = {}
+        for conn in self.config.getValue("Database", "connections").replace(" ", "").replace("\t", "").split(","):
+        dtStart = datetime.now()
+        # TODO : what does config parser do if no keyword found?
+        dbparams = {"host" : self.config.getValue(conn, "Host"), "db" : self.config.getValue(conn, "Database"), "user" : self.config.getValue(conn, "User"), "passwd" : self.config.getValue(conn, "Password"), "tns" : self.config.getValue(conn, "TnsName")}
+        try:
+            db = Db(self.config.getValue(conn, "DatabaseType"), dbparams)
+        except:
+            print conn, "error: cannot connect to database (%s)"%str(dbparams)
+        try:
+            duplicates[conn] = db.insert(table, header, records)
+        except:
+            print conn, "error: cannot insert data ===========================\n%s============================\n"%str(records)
+        print conn, datetime.now() - dtStart
+        return duplicates # dict of duplicates
+    
+    
+    def filesys(self, satellite, instrument, session, header, records):
+        dst = os.path.join(self.path, satellite, instrument, "L1", session + ".xt")
+        print "Saving to", dst
+        file = open(dst, "w")
+        file.write("\t".join(header) + "\n")
+        for r in sorted(records.keys()):
+        r = [r] + map(lambda entry : str(entry), records[r])
+        file.write("\t".join(r) + "\n")
+        file.close()
+        return

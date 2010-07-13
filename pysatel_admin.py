@@ -26,9 +26,7 @@ from shutil import rmtree
 
 import ConfigParser
 
-from pysatel import coord, telemetry
-from pysatel.dbdriver import Db
-
+from pysatel import coord, telemetry, dbdriver
 
 def helpmsg():
     """Print the help message"""
@@ -122,7 +120,7 @@ def create(src):
     # Create tables in all the required database systems
     for conn in connections:
         try:
-            dbase = Db(config.get(conn, "DatabaseType"), {
+            dbase = dbdriver.Db(config.get(conn, "DatabaseType"), {
             "host": config.get(conn, "Host"),
             "db": config.get(conn, "Database"),
             "user": config.get(conn, "User"),
@@ -141,10 +139,7 @@ def create(src):
                 for cl in  coord.header() + instruments[i]]
                 # Data table names conform to the $SATNAME_$INSTRNAME rule
                 dbase.createTable(table = "%s_%s" % (satellitename, i),
-                cols = dict([("dt_record",
-                            {"type": "datetime", "NOT": "NULL"}),
-                            ("microsec", {"type": "int", "default": "0"})]
-                            + thecols), primarykey = "dt_record")
+                cols = dict(thecols), primarykey = "dt_record")
     
     link = os.path.join(os.path.dirname(telemetry.__file__),
         satellitename + ".py")
@@ -195,7 +190,7 @@ def delete(satellitename):
     # Delete the data from the RDBS
     for conn in config.get("Database", "connections").replace(" ", "").\
         replace("\t", "").split(","):
-        dbase = Db(config.get(conn, "DatabaseType"), {
+        dbase = dbdriver.Db(config.get(conn, "DatabaseType"), {
         "host": config.get(conn, "Host"),
         "db": config.get(conn, "Database"),
         "user": config.get(conn, "User"),

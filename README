@@ -1,18 +1,20 @@
 0. PREFACE
 
-	The PySatel (Python-Satellite) project is devoted to building a convenient framework for easy management of constellations of multiple scientific satellites, each 
-	carrying multiple different instruments.
+	The PySatel (Python-Satellite) project aims to build a convenient framework for acquiring and processing data from a fleet
+of scientific spacecraft.
 
 	PySatel requires the following packages to be installed:
-		o mysql
-		o python, python-scipy, python-mysqldb
+		* MySQL 5.0
+		* Python, Python-scipy, Python-mysqldb
 	PySatel requires the following Python modules to be installed:
-		o ephem by pyephem project http://rhodesmill.org/pyephem/
-		o igrf and cxform by python-magnetosphere project https://code.google.com/p/python-magnetosphere/
+		* ephem by the pyephem project http://rhodesmill.org/pyephem/
+		* igrf and cxform by the python-magnetosphere project https://code.google.com/p/python-magnetosphere/
+
 
 1. WRITING A SATELLITE PROCESSING MODULE (SPM)
 
-	The SPM must be a Python module conforming to the cpecial API (you can find a template telemetry file in the directory where pysatel has been downloaded)
+	An SPM is a Python module conforming to the appropriate API. An SPM template can be found in the pysatel source code directory.
+
 
 2. USAGE
 
