@@ -20,9 +20,9 @@ import tables
 from new import classobj
 
 
-def createtable(spacecraft, instrument, cols):
+def createtable(directory, spacecraft, instrument, cols):
     """Create a new instrument table"""
-    h5file = tables.openFile("%s.h5" % spacecraft, "w", spacecraft)
+    h5file = tables.openFile("%s/%s.h5" % (directory, spacecraft), "w", spacecraft)
     group = h5file.createGroup("/", spacecraft, spacecraft)
     fields = { "dt_record": tables.Time32Col(), "microsec": tables.Int32Col() }
     for col in cols:
@@ -33,17 +33,17 @@ def createtable(spacecraft, instrument, cols):
     h5file.close()
 
 
-def droptable(spacecraft, instrument):
+def droptable(directory, spacecraft, instrument):
     """Remove an instrument table from the spacecraft's HDF5 file."""
-    h5file = tables.openFile("%s.h5" % spacecraft, "w", spacecraft)
+    h5file = tables.openFile("%s/%s.h5" % (directory, spacecraft), "w", spacecraft)
     table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
     table.remove()
     h5file.close()
 
 
-def insert(spacecraft, instrument, columns, values):
+def insert(directory, spacecraft, instrument, columns, values):
     """Insert new measurements into the spacecraft's HDF5 file."""
-    h5file = tables.openFile("%s.h5" % spacecraft, "w", spacecraft)
+    h5file = tables.openFile("%s/%s.h5" % (directory, spacecraft), "w", spacecraft)
     table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
     record = table.row
     for val in values:
