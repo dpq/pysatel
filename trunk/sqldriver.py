@@ -18,7 +18,7 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, MetaData, Index
-from sqlalchemy.types import DateTime, Integer
+from sqlalchemy.types import DateTime, Integer, Float
 
 
 class SQLDriver:
@@ -42,27 +42,30 @@ class SQLDriver:
         del self.engine
     
     
-    def createtable(self, tablename, cols):
+    def createtable(self, spacecraft, instrument, cols):
         """Create a new instrument table"""
+        tablename = "%s_%s" % (spacecraft, instrument)
         args = [
-            Column("dt_record", DateTime, nullable=False, primary_key=True), \
+            Column("dt_record", DateTime, nullable=False, primary_key=True),
             Column("microsec", Integer, default=0, primary_key=True)]
         for col in cols:
-            args.append(Column(col, Integer, default=None))
+            args.append(Column(col, Float, default=None))
         tbl = Table(tablename, self.meta, *args)
         tbl.create()
         i = Index('%s_index' % tablename, tbl.c.dt_record)
         i.create()
     
     
-    def droptable(self, tablename):
+    def droptable(self, spacecraft, instrument):
         """Drop a table"""
+        tablename = "%s_%s" % (spacecraft, instrument)
         tbl = Table(tablename, self.meta, autoload=True)
         tbl.drop()
     
     
-    def insert(self, tablename, columns, values):
+    def insert(self, spacecraft, instrument, columns, values):
         """Insert new measurements into connected SQL databases."""
+        tablename = "%s_%s" % (spacecraft, instrument)
         conn = self.engine.connect()
         tbl = Table(tablename, self.meta, autoload=True)
         statements = []

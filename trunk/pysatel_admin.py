@@ -120,7 +120,7 @@ def create(src):
     # Create tables in all the required database systems
     for conn in connections:
         try:
-            dbase = dbdriver.Db(config.get(conn, "DatabaseType"), {
+            dbase = sqldriver.SQLDriver(config.get(conn, "DatabaseType"), {
             "host": config.get(conn, "Host"),
             "db": config.get(conn, "Database"),
             "user": config.get(conn, "User"),
@@ -135,11 +135,7 @@ def create(src):
             # TODO Validate instrument name (i)
             if len(instruments[i]) > 0:
                 # Build the list of columns in the current table
-                thecols = [(cl, {"type": "float", "default": "NULL"})
-                for cl in  coord.header() + instruments[i]]
-                # Data table names conform to the $SATNAME_$INSTRNAME rule
-                dbase.createTable(table = "%s_%s" % (satellitename, i),
-                cols = dict(thecols), primarykey = "dt_record")
+                dbase.createTable(satellitename, i, instruments[i] + coord.header())
     
     link = os.path.join(os.path.dirname(telemetry.__file__),
         satellitename + ".py")
@@ -190,7 +186,7 @@ def delete(satellitename):
     # Delete the data from the RDBS
     for conn in config.get("Database", "connections").replace(" ", "").\
         replace("\t", "").split(","):
-        dbase = dbdriver.Db(config.get(conn, "DatabaseType"), {
+        dbase = sqldriver.SQLDriver(config.get(conn, "DatabaseType"), {
         "host": config.get(conn, "Host"),
         "db": config.get(conn, "Database"),
         "user": config.get(conn, "User"),
@@ -198,8 +194,8 @@ def delete(satellitename):
         "tns": config.get(conn, "TnsName")
         })
         # TODO What if no such table exists or permission is denied?
-        for tbl in tables:
-            dbase.dropTable(tbl)
+        for i in instruments:
+            dbase.dropTable(satellitename, i)
 
     print "Done. You can begin smashing your head against the wall if you \
         didn't mean it."
