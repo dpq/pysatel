@@ -1,5 +1,6 @@
 #!/usr/bin/python
-"""PySatel - a Python framework for automated processing of space satellite scientific data
+"""PySatel - a Python framework for automated processing of scientific data
+   acquired from spacecraft instruments.
    Copyright (C) 2010 David Parunakian
 
    This program is free software: you can redistribute it and/or modify
@@ -17,38 +18,39 @@
 """
 import os
 import imp
-import pysatel
-import pysatel.export
-import pysatel.coord
-from pysatel import telemetry
 from datetime import datetime
+import ConfigParser
+from sys import argv
+
+from pysatel import export, coord, telemetry
 
 # Read the config file and create the exporter
-import ConfigParser
 config = ConfigParser.SafeConfigParser()
 config.read(os.path.join("/etc/pysatel.conf"))
 e = pysatel.export.export(config.get("Main", "ArchivePath"))
 
+
 def Module(satellite):
-	globals()["telemetry.%s"%satellite] = imp.load_source(satellite, os.path.join(os.path.dirname(pysatel.__file__), "telemetry", "%s.py"%satellite))
-	module = globals()["telemetry.%s"%satellite]
-	return module
+    globals()["telemetry.%s"%satellite] = imp.load_source(satellite, os.path.join(os.path.dirname(pysatel.__file__), "telemetry", "%s.py"%satellite))
+    module = globals()["telemetry.%s"%satellite]
+    return module
+
 
 def totalFileLists(satellite, level = 0):
-	module = Module(satellite)
-	instruments = module.desc()["instruments"]
-	result = {}
-	for i in instruments:
-		if len(instruments[i]) != 0:
-			pathToInstr = os.path.join(config.get("Main", "ArchivePath"), satellite, i, "L" + str(level))
-			result[i] = map(lambda f : os.path.join(pathToInstr, f), os.listdir(pathToInstr))
-	return result
+    module = Module(satellite)
+    instruments = module.desc()["instruments"]
+    result = {}
+    for i in instruments:
+        if len(instruments[i]) != 0:
+        pathToInstr = os.path.join(config.get("Main", "ArchivePath"), satellite, i, "L" + str(level))
+        result[i] = map(lambda f : os.path.join(pathToInstr, f), os.listdir(pathToInstr))
+    return result
+
 
 mode = "fetch"
 files = None
 res = [] # not result but resource :)
 
-from sys import argv
 if len(argv) > 1:
 	satellite = argv[1]
 	res = [satellite]
@@ -135,4 +137,3 @@ for satellite in res:
 			###############################################
 			e.database(satelliteName, instrumentName, sessionId, header, final)
 		print "Time spent :", datetime.now() - dtStart
-

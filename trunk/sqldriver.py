@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """PySatel - a Python framework for automated processing of scientific data
    acquired from spacecraft instruments.
    Copyright (C) 2010 David Parunakian
@@ -22,7 +21,12 @@ from sqlalchemy import Table, Column, MetaData, Index
 from sqlalchemy.types import DateTime, Integer
 
 
-class Driver:
+class SQLDriver:
+    """This SQLAlchemy wrapper exposes only those functions
+    that are used by pysatel, and hides all database interaction
+    details.
+
+    """
     def __init__(self, dialect, args, driver=""): # params is a dict
         if driver != "":
             dialect = "%s+%s" % (dialect, driver)
@@ -40,12 +44,12 @@ class Driver:
     
     def createtable(self, tablename, cols):
         """Create a new instrument table"""
-        columns = [
+        args = [
             Column("dt_record", DateTime, nullable=False, primary_key=True), \
             Column("microsec", Integer, default=0, primary_key=True)]
         for col in cols:
-            columns.append(Column(col, Integer, default=None))
-        tbl = Table(tablename, self.meta, *columns)
+            args.append(Column(col, Integer, default=None))
+        tbl = Table(tablename, self.meta, *args)
         tbl.create()
         i = Index('%s_index' % tablename, tbl.c.dt_record)
         i.create()
@@ -57,41 +61,13 @@ class Driver:
         tbl.drop()
     
     
-    #def insert(self, table, header, valueslists):
-        #if len(valueslists) == 0:
-            #print "KAKOGO??? Valueslists is empty :("
-        #return
-        #if self.type == "oracle":
-        #columns = ",".join(map(lambda h : '"%s"'%h, header))
-        #placeholders = ",".join(map(lambda i : ":" + str(i+1), range(len(header))))
-        #request = 'INSERT INTO smdc."%s"('%table + columns + ') VALUES (to_date(:1, \'yyyy-mm-dd hh24:mi:ss\'),' + placeholders[3:] + ')'
-        #self.cursor.prepare(request)
-        #try:
-            #self.cursor.executemany(None, valueslists)
-            #self.conn.commit()
-        #except cx_Oracle.Error, strerror:
-            #print strerror[:-1]
-        #elif self.type == "mysql":
-        #columns = ",".join(header)
-        #placeholders = ("%s,"*len(header))[:-1]
-        #trying = 0
-        #try:
-            #maxRows = self.maxAllowedPacked / len(" ".join(map(lambda v : str(v), valueslists[0]))) / 2
-            #i = 0
-            #while i < len(valueslists):
-            #self.cursor.executemany("insert into `" + table + "` ("+columns+") values ("+placeholders+")", valueslists[i:i+maxRows])
-            #i += maxRows
-        #except MySQLError, strerror:
-            #print "MySQLError :", strerror, "trying ..."
-            #trying = 1
-        #if trying:
-            #print "Trying row by row... (", len(valueslists), ") rows" 
-            #for i in range(len(valueslists)):
-            #try:
-                #self.cursor.execute(("insert into `" + table + "` ("+columns+") values ("+placeholders+");")%valueslists[i])
-            #except MySQLError, strerror:
-                #print "MySQLError :", strerror
-            #except:
-                #pass
-        #return 0
-
+    def insert(self, tablename, columns, values):
+        """Insert new measurements into connected SQL databases."""
+        conn = self.engine.connect()
+        tbl = Table(tablename, self.meta, autoload=True)
+        statements = []
+        for val in values:
+            statements.append(dict([(columns[i], val[i])
+                for i in range(len(columns))]))
+        conn.execute(tbl.insert(), statements)
+        conn.close()
