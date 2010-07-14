@@ -26,7 +26,7 @@ from shutil import rmtree
 
 import ConfigParser
 
-from pysatel import coord, telemetry, dbdriver
+from pysatel import coord, telemetry, sqldriver
 
 def helpmsg():
     """Print the help message"""
