@@ -30,8 +30,8 @@ class SQLDriver:
     def __init__(self, dialect, args, driver=""): # params is a dict
         if driver != "":
             dialect = "%s+%s" % (dialect, driver)
-        self.engine = create_engine("%s://%s:%s@%s:%s/%s" % (dialect, \
-            args["user"], args["passwd"], args["host"], args["port"], \
+        self.engine = create_engine("%s://%s:%s@%s:%s/%s" % (dialect,
+            args["user"], args["passwd"], args["host"], args["port"],
             args["db"]), pool_recycle = 3600)
         self.meta = MetaData()
         self.meta.bind = self.engine
@@ -42,13 +42,13 @@ class SQLDriver:
         del self.engine
     
     
-    def createtable(self, spacecraft, instrument, cols):
+    def createtable(self, header, spacecraft, instrument, session = ""):
         """Create a new instrument table"""
         tablename = "%s_%s" % (spacecraft, instrument)
         args = [
             Column("dt_record", DateTime, nullable=False, primary_key=True),
             Column("microsec", Integer, default=0, primary_key=True)]
-        for col in cols:
+        for col in header:
             args.append(Column(col, Float, default=None))
         tbl = Table(tablename, self.meta, *args)
         tbl.create()
@@ -56,21 +56,21 @@ class SQLDriver:
         i.create()
     
     
-    def droptable(self, spacecraft, instrument):
+    def droptable(self, spacecraft, instrument, session = ""):
         """Drop a table"""
         tablename = "%s_%s" % (spacecraft, instrument)
         tbl = Table(tablename, self.meta, autoload=True)
         tbl.drop()
     
     
-    def insert(self, spacecraft, instrument, columns, values):
+    def insert(self, header, values, spacecraft, instrument, session = ""):
         """Insert new measurements into connected SQL databases."""
         tablename = "%s_%s" % (spacecraft, instrument)
         conn = self.engine.connect()
         tbl = Table(tablename, self.meta, autoload=True)
         statements = []
         for val in values:
-            statements.append(dict([(columns[i], val[i])
-                for i in range(len(columns))]))
+            statements.append(dict([(header[i], val[i])
+                for i in range(len(header))]))
         conn.execute(tbl.insert(), statements)
         conn.close()
