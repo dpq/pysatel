@@ -33,7 +33,7 @@ class HDFDriver:
             "microsec": tables.Int32Col()}
         for col in header:
             fields[col] = tables.Float32Col()
-        record = classobj('Record', (), fields)
+        record = classobj('Record', (tables.isDescription,), fields)
         table = h5file.createTable(group, instrument, record, instrument)
         table.flush()
         h5file.close()
@@ -53,7 +53,7 @@ class HDFDriver:
         """Insert new measurements into the spacecraft's HDF5 file."""
         session = "" if session != "" else "_" + session
         h5file = tables.openFile("%s/%s%s.h5" % (self.directory, spacecraft,
-            session), "w", spacecraft)
+            session), "a", spacecraft)
         table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
         record = table.row
         for val in values:

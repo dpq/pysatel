@@ -22,28 +22,29 @@ from datetime import datetime
 import ConfigParser
 from sys import argv
 
-from pysatel import export, coord, telemetry
+from pysatel import coord, telemetry, sqldriver, hdfdriver
 
-# Read the config file and create the exporter
 config = ConfigParser.SafeConfigParser()
 config.read(os.path.join("/etc/pysatel.conf"))
-e = pysatel.export.export(config.get("Main", "ArchivePath"))
 
-
-def Module(satellite):
-    globals()["telemetry.%s"%satellite] = imp.load_source(satellite, os.path.join(os.path.dirname(pysatel.__file__), "telemetry", "%s.py"%satellite))
-    module = globals()["telemetry.%s"%satellite]
+def Module(spacecraft):
+    # TODO Check if the file exists and can be loaded
+    globals()["telemetry.%s" % spacecraft] = imp.load_source(spacecraft,
+        os.path.join(os.path.dirname(pysatel.__file__),
+        "telemetry", "%s.py" % spacecraft))
+    module = globals()["telemetry.%s" % spacecraft]
     return module
 
 
-def totalFileLists(satellite, level = 0):
-    module = Module(satellite)
+def allfiles(spacecraft, level = 0):
+    module = Module(spacecraft)
     instruments = module.desc()["instruments"]
     result = {}
     for i in instruments:
         if len(instruments[i]) != 0:
-        pathToInstr = os.path.join(config.get("Main", "ArchivePath"), satellite, i, "L" + str(level))
-        result[i] = map(lambda f : os.path.join(pathToInstr, f), os.listdir(pathToInstr))
+            path = os.path.join(config.get("Main", "ArchivePath"), spacecraft,
+            i, "L" + str(level))
+            result[i] = (os.path.join(path, f) for f in os.listdir(path))
     return result
 
 
@@ -52,8 +53,8 @@ files = None
 res = [] # not result but resource :)
 
 if len(argv) > 1:
-	satellite = argv[1]
-	res = [satellite]
+	spacecraft = argv[1]
+	res = [spacecraft]
 else:
 	# Compose the list of satellites that must be processed
 	for x in os.listdir(os.path.join(os.path.dirname(pysatel.__file__), "telemetry")):
@@ -71,12 +72,12 @@ if len(argv) > 3:
 	print "len(argv) > 3? \nDO IT YOURSELF :)\n"
 #	files = map(lambda f : os.path.abspath(f), argv[3:])
 
-# Parse every instrument of every satellite, append coordinates and write the resulting output to filesystem and MySQL database
-for satellite in res:
-	module = Module(satellite)
+# Parse every instrument of every spacecraft, append coordinates and write the resulting output to filesystem and MySQL database
+for spacecraft in res:
+	module = Module(spacecraft)
 	satelliteName = module.desc()["name"]
 	#######################################################
-	print "Step 0: getting paths to files of", satellite
+	print "Step 0: getting paths to files of", spacecraft
 	#######################################################
 	if mode == "fetch":
 		files = module.fetch(config.get("Main", "ArchivePath"))
@@ -84,7 +85,7 @@ for satellite in res:
 		files = module.replenish(pathToBinFiles, config.get("Main", "ArchivePath"))
 	elif mode == "processBinary":
 		if files == None:
-			files = totalFileLists(satellite, level = 0)
+			files = allfiles(spacecraft, level = 0)
 	if mode == "saveToDatabase":
 		instruments = []
 		map(lambda i: instruments.append(i) if len(module.desc()["instruments"][i]) > 0 else None, module.desc()["instruments"].keys())
@@ -92,7 +93,7 @@ for satellite in res:
 		instruments = files.keys()
 
 	if len(instruments) == 0:
-		print datetime.now().strftime("%d %b, %Y %H:%M:%S"), "No new telemetry from " + satellite
+		print datetime.now().strftime("%d %b, %Y %H:%M:%S"), "No new telemetry from " + spacecraft
 	for instrumentName in instruments:
 		dtStart = datetime.now()
 		if mode == "saveToDatabase":
