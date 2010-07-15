@@ -19,36 +19,46 @@
 import tables
 from new import classobj
 
+class HDFDriver:
+    def __init__(self, directory):
+        self.directory = directory
 
-def createtable(directory, spacecraft, instrument, cols):
-    """Create a new instrument table"""
-    h5file = tables.openFile("%s/%s.h5" % (directory, spacecraft), "w", spacecraft)
-    group = h5file.createGroup("/", spacecraft, spacecraft)
-    fields = { "dt_record": tables.Time32Col(), "microsec": tables.Int32Col() }
-    for col in cols:
-        fields[col] = tables.Float32Col()
-    record = classobj('Record', (), fields)
-    table = h5file.createTable(group, instrument, record, instrument)
-    table.flush()
-    h5file.close()
-
-
-def droptable(directory, spacecraft, instrument):
-    """Remove an instrument table from the spacecraft's HDF5 file."""
-    h5file = tables.openFile("%s/%s.h5" % (directory, spacecraft), "w", spacecraft)
-    table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
-    table.remove()
-    h5file.close()
-
-
-def insert(directory, spacecraft, instrument, columns, values):
-    """Insert new measurements into the spacecraft's HDF5 file."""
-    h5file = tables.openFile("%s/%s.h5" % (directory, spacecraft), "w", spacecraft)
-    table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
-    record = table.row
-    for val in values:
-        for i in range(len(val)):
-            record[columns[i]] = val[i]
-        record.append()
-    table.flush()
-    h5file.close()
+    def createtable(self, header, spacecraft, instrument, session = ""):
+        """Create a new instrument table"""
+        session = "" if session != "" else "_" + session
+        h5file = tables.openFile("%s/%s%s.h5" % (self.directory, spacecraft,
+            session), "w", spacecraft)
+        group = h5file.createGroup("/", spacecraft, spacecraft)
+        fields = {"dt_record": tables.Time32Col(),
+            "microsec": tables.Int32Col()}
+        for col in header:
+            fields[col] = tables.Float32Col()
+        record = classobj('Record', (), fields)
+        table = h5file.createTable(group, instrument, record, instrument)
+        table.flush()
+        h5file.close()
+    
+    
+    def droptable(self, spacecraft, instrument, session = ""):
+        """Remove an instrument table from the spacecraft's HDF5 file."""
+        session = "" if session != "" else "_" + session
+        h5file = tables.openFile("%s/%s%s.h5" % (self.directory, spacecraft,
+            session), "w", spacecraft)
+        table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
+        table.remove()
+        h5file.close()
+    
+    
+    def insert(self, header, values, spacecraft, instrument, session = ""):
+        """Insert new measurements into the spacecraft's HDF5 file."""
+        session = "" if session != "" else "_" + session
+        h5file = tables.openFile("%s/%s%s.h5" % (self.directory, spacecraft,
+            session), "w", spacecraft)
+        table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
+        record = table.row
+        for val in values:
+            for i in range(len(val)):
+                record[header[i]] = val[i]
+            record.append()
+        table.flush()
+        h5file.close()
