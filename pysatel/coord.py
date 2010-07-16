@@ -24,9 +24,7 @@ import ConfigParser
 
 import ephem
 from scipy import mat, cos, sin, arctan, sqrt, pi, arctan2
-
-import igrf
-import cxform
+from magnetosphere import igrf, cxform
 
 
 def cbrt(x):
