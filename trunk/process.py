@@ -18,14 +18,13 @@
 """
 import os
 import imp
-from datetime import datetime
+from datetime import datetime, timedelta
 import ConfigParser
-from sys import argv
+from optparse import OptionParser
 
-from pysatel import coord, telemetry, sqldriver, hdfdriver
+import pysatel
+from pysatel import coord, sqldriver, hdfdriver
 
-config = ConfigParser.SafeConfigParser()
-config.read(os.path.join("/etc/pysatel.conf"))
 
 def Module(spacecraft):
     # TODO Check if the file exists and can be loaded
@@ -36,7 +35,7 @@ def Module(spacecraft):
     return module
 
 
-def allfiles(spacecraft, level = 0):
+def allfiles(spacecraft, level=0):
     module = Module(spacecraft)
     instruments = module.desc()["instruments"]
     result = {}
@@ -48,93 +47,94 @@ def allfiles(spacecraft, level = 0):
     return result
 
 
-mode = "fetch"
-files = None
-res = [] # not result but resource :)
+if __name__ == "__main__":
+    config = ConfigParser.SafeConfigParser()
+    config.read("/etc/pysatel.conf")
 
-if len(argv) > 1:
-	spacecraft = argv[1]
-	res = [spacecraft]
-else:
-	# Compose the list of satellites that must be processed
-	for x in os.listdir(os.path.join(os.path.dirname(pysatel.__file__), "telemetry")):
-		if x.endswith(".py") and x != "__init__.py":
-			res.append(".".join(x.split(".")[:-1]))
-if len(argv) > 2:
-	if argv[2] in ["processBinary", "L0"]:
-		mode = "processBinary"
-	elif argv[2] in ["saveToDatabase", "L1"]:
-		mode = "saveToDatabase"
- 	else:
-		pathToBinFiles = argv[2]
-		mode = "replenish"
-if len(argv) > 3:
-	print "len(argv) > 3? \nDO IT YOURSELF :)\n"
-#	files = map(lambda f : os.path.abspath(f), argv[3:])
+    resource = []
 
-# Parse every instrument of every spacecraft, append coordinates and write the resulting output to filesystem and MySQL database
-for spacecraft in res:
-	module = Module(spacecraft)
-	satelliteName = module.desc()["name"]
-	#######################################################
-	print "Step 0: getting paths to files of", spacecraft
-	#######################################################
-	if mode == "fetch":
-		files = module.fetch(config.get("Main", "ArchivePath"))
-	elif mode == "replenish":
-		files = module.replenish(pathToBinFiles, config.get("Main", "ArchivePath"))
-	elif mode == "processBinary":
-		if files == None:
-			files = allfiles(spacecraft, level = 0)
-	if mode == "saveToDatabase":
-		instruments = []
-		map(lambda i: instruments.append(i) if len(module.desc()["instruments"][i]) > 0 else None, module.desc()["instruments"].keys())
-	else:
-		instruments = files.keys()
+    parser = OptionParser()
+    parser.add_option("-m", "--mode", type="string",
+        dest="mode", default="fetch")
+    parser.add_option("-s", "--spacecraft", type="string",
+        dest="spacecraft", default="")
+    parser.add_option("-p", "--path", type="string", dest="path", default="")
 
-	if len(instruments) == 0:
-		print datetime.now().strftime("%d %b, %Y %H:%M:%S"), "No new telemetry from " + spacecraft
-	for instrumentName in instruments:
-		dtStart = datetime.now()
-		if mode == "saveToDatabase":
-			path = os.path.join(config.get("Main", "ArchivePath"), satelliteName, instrumentName, "L1")
-			files = { instrumentName : map(lambda f : os.path.join(path, f), os.listdir(path)) }
-		for f in files[instrumentName]:
-			print "Processing ", f
-			final = []
-			header = ("dt_record",) + tuple(module.desc()["instruments"][instrumentName]) + pysatel.coord.header()
-			if mode != "saveToDatabase":
+    (options, args) = parser.parse_args()
 
-				###############################################
-				print "\nStep 1: Parsing file"
-				###############################################
-				sessionId, data = module.parse(instrumentName, f)
-				if len(data) == 0:
-					print "No records; skipped."
-					continue
+    if options.mode == "import":
+        if options.path == "":
+            exit()
+        # TODO Add support for importing a single file
+        if os.path.isdir(options.path):
+            pass
+        else:
+            exit()
+    elif options.mode in ["fetch", "parse"]:
+        # TODO Add support for specifying a single instrument onboard
+        if options.spacecraft == "":
+            for x in os.listdir(os.path.join(
+                os.path.dirname(pysatel.__file__), "telemetry")):
+                if x.endswith(".py") and x != "__init__.py":
+                    resource.append(x.rstrip(".py"))
+        else:
+            resource.append(options.spacecraft)
 
-				###############################################
-				print "Step 2: calculating coordinates"
-				###############################################
-				result = dict(map(lambda dt, measurement, coordinate : [dt.strftime("%Y-%m-%d %H:%M:%S"), measurement + coordinate], data.keys(), data.values(), pysatel.coord.coord(module.desc()["id"], data.keys())))
-				for k in sorted(result.keys()):
-					final.append((k,) + tuple(map(lambda s : str(s) if s != None else s, result[k])))
+    hdf = hdfdriver.HDFDriver(config.get("Main", "ArchivePath"))
+    connections = config.get("Database", "connections").\
+    replace(" ", "").replace("\t", "").split(",")
+    sql = []
+    for conn in connections:
+        try:
+            sql.append(sqldriver.SQLDriver(config.get(conn, "DatabaseType"), {
+            "host": config.get(conn, "Host"),
+            "db": config.get(conn, "Database"),
+            "user": config.get(conn, "User"),
+            "passwd": config.get(conn, "Password"),
+            "tns": config.get(conn, "TnsName")}))
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError,
+            ConfigParser.MissingSectionHeaderError, ConfigParser.ParsingError):
+            print "[E] Missing or malformed configuration file"
+            exit()
 
-				###############################################
-				print "Step 3: saving to text file ..."
-				###############################################
-				e.filesys(satelliteName, instrumentName, sessionId, header, result)
+    # Parse every instrument of every spacecraft, append coordinates and write
+    # the resulting output to filesystem and MySQL database
+    for spacecraft in resource:
+        module = Module(spacecraft)
+        satellitename = module.desc()["name"]
+        if options.mode == "fetch":
+            files = module.fetchtelemetry(config.get("Main", "ArchivePath"))
+        elif options.mode == "import":
+            files = module.importtelemetry(options.path,
+                config.get("Main", "ArchivePath"))
+        elif options.mode == "parse":
+            files = allfiles(spacecraft, 0)
 
-			else:
-				sessionId = f.split("/")[-1].split(".")[0]
-				f = open(f)
-				f.readline()
-				for line in f:
-					final += [[line[:19].replace("T", ' ')] + map(lambda s : s if s != "None" else None, tuple(line[21:].split()))]
-				f.close()
+        instruments = files.keys()
+        if len(instruments) == 0:
+            print datetime.now().strftime("%d %b, %Y %H:%M:%S"), \
+                "No new telemetry from %s." % spacecraft
 
-			###############################################
-			print "Step 4: saving to databases ..."
-			###############################################
-			e.database(satelliteName, instrumentName, sessionId, header, final)
-		print "Time spent :", datetime.now() - dtStart
+        for instrumentname in instruments:
+            for f in files[instrumentname]:
+                print "Processing ", f
+                header = ("dt_record", "microsec") + \
+                    tuple(module.desc()["instruments"][instrumentname]) + \
+                    coord.header()
+                sessionid, data = module.parse(instrumentname, f)
+                if len(data) == 0:
+                    print "No records; skipped."
+                    continue
+
+                coordinates = coord.coord(module.desc()["id"], data.keys())
+                result = []
+                for dt in sorted(data.keys()):
+                    res = (dt - timedelta(microseconds = dt.microsecond),
+                        dt.microsecond) + data[dt] + coordinates[dt]
+                    result.append(res)
+
+                for db in sql:
+                    db.insert(header, result, satellitename, instrumentname,
+                        sessionid)
+                hdf.insert(header, result, satellitename, instrumentname,
+                    sessionid)
