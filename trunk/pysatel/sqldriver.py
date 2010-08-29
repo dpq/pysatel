@@ -30,11 +30,12 @@ class SQLDriver:
     def __init__(self, dialect, args, driver=""): # params is a dict
         if driver != "":
             dialect = "%s+%s" % (dialect, driver)
+        self.meta = MetaData()
         self.engine = create_engine("%s://%s:%s@%s:%s/%s" % (dialect,
             args["user"], args["passwd"], args["host"], args["port"],
             args["db"]), pool_recycle = 3600)
-        self.meta = MetaData()
         self.meta.bind = self.engine
+        #self.maxself.maxAllowedPacked = int(dict(self.cursor.fetchall())["max_allowed_packet"])
     
     
     def __del__(self):
@@ -72,5 +73,7 @@ class SQLDriver:
         for val in values:
             statements.append(dict([(header[i], val[i])
                 for i in range(len(header))]))
-        conn.execute(tbl.insert(), statements)
+            if len(statements) == 500:
+                conn.execute(tbl.insert(), statements)
+            statements = []
         conn.close()

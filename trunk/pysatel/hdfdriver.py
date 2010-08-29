@@ -17,6 +17,8 @@
 """
 
 import tables
+import datetime
+import time
 from new import classobj
 
 class HDFDriver:
@@ -26,14 +28,17 @@ class HDFDriver:
     def createtable(self, header, spacecraft, instrument, session = ""):
         """Create a new instrument table"""
         session = "" if session != "" else "_" + session
-        h5file = tables.openFile("%s/%s%s.h5" % (self.directory, spacecraft,
-            session), "w", spacecraft)
-        group = h5file.createGroup("/", spacecraft, spacecraft)
+        h5file = tables.openFile("%s/%s.h5" % (self.directory, spacecraft,),
+            "a", spacecraft)
+        try:
+            group = h5file.createGroup("/", spacecraft, spacecraft)
+        except:
+            group = h5file.getNode("/%s" % spacecraft)
         fields = {"dt_record": tables.Time32Col(),
             "microsec": tables.Int32Col()}
         for col in header:
             fields[col] = tables.Float32Col()
-        record = classobj('Record', (tables.isDescription,), fields)
+        record = classobj('Record', (tables.IsDescription,), fields)
         table = h5file.createTable(group, instrument, record, instrument)
         table.flush()
         h5file.close()
@@ -42,8 +47,8 @@ class HDFDriver:
     def droptable(self, spacecraft, instrument, session = ""):
         """Remove an instrument table from the spacecraft's HDF5 file."""
         session = "" if session != "" else "_" + session
-        h5file = tables.openFile("%s/%s%s.h5" % (self.directory, spacecraft,
-            session), "w", spacecraft)
+        h5file = tables.openFile("%s/%s.h5" % (self.directory, spacecraft,),
+            "w", spacecraft)
         table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
         table.remove()
         h5file.close()
@@ -52,13 +57,16 @@ class HDFDriver:
     def insert(self, header, values, spacecraft, instrument, session = ""):
         """Insert new measurements into the spacecraft's HDF5 file."""
         session = "" if session != "" else "_" + session
-        h5file = tables.openFile("%s/%s%s.h5" % (self.directory, spacecraft,
-            session), "a", spacecraft)
+        h5file = tables.openFile("%s/%s.h5" % (self.directory, spacecraft,),
+            "a", spacecraft)
         table = h5file.getNode("/%s/%s" % (spacecraft, instrument))
         record = table.row
         for val in values:
             for i in range(len(val)):
-                record[header[i]] = val[i]
+                if type(val[i]).__name__ == "datetime":
+                    record[header[i]] = time.mktime(val[i].timetuple())
+                else:
+                    record[header[i]] = val[i]
             record.append()
         table.flush()
         h5file.close()
