@@ -67,7 +67,7 @@ if __name__ == "__main__":
             exit()
         # TODO Add support for importing a single file
         if os.path.isdir(options.path):
-            pass
+            resource.append(options.spacecraft)
         else:
             exit()
     elif options.mode in ["fetch", "parse"]:
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         else:
             resource.append(options.spacecraft)
 
-    hdf = hdfdriver.HDFDriver(config.get("Main", "ArchivePath"))
+
     connections = config.get("Database", "connections").\
     replace(" ", "").replace("\t", "").split(",")
     sql = []
@@ -91,7 +91,7 @@ if __name__ == "__main__":
             "db": config.get(conn, "Database"),
             "user": config.get(conn, "User"),
             "passwd": config.get(conn, "Password"),
-            "tns": config.get(conn, "TnsName")}))
+            "port": config.get(conn, "Port")}))
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError,
             ConfigParser.MissingSectionHeaderError, ConfigParser.ParsingError):
             print "[E] Missing or malformed configuration file"
@@ -114,7 +114,9 @@ if __name__ == "__main__":
         if len(instruments) == 0:
             print datetime.now().strftime("%d %b, %Y %H:%M:%S"), \
                 "No new telemetry from %s." % spacecraft
-
+        
+        hdf = hdfdriver.HDFDriver(os.path.join(
+            config.get("Main", "ArchivePath"), satellitename))
         for instrumentname in instruments:
             for f in files[instrumentname]:
                 print "Processing ", f
@@ -126,15 +128,18 @@ if __name__ == "__main__":
                     print "No records; skipped."
                     continue
 
-                coordinates = coord.coord(module.desc()["id"], data.keys())
+                timestamps = sorted(data.keys())
+                coordinates = coord.coord(module.desc()["id"], timestamps)
                 result = []
-                for dt in sorted(data.keys()):
+                for i in range(len(timestamps)):
+                    dt = timestamps[i]
                     res = (dt - timedelta(microseconds = dt.microsecond),
-                        dt.microsecond) + data[dt] + coordinates[dt]
+                        dt.microsecond) + data[dt] + coordinates[i]
                     result.append(res)
 
                 for db in sql:
                     db.insert(header, result, satellitename, instrumentname,
                         sessionid)
+                print header, result
                 hdf.insert(header, result, satellitename, instrumentname,
                     sessionid)

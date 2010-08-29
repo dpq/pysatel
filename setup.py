@@ -7,6 +7,6 @@ setup(name='PySatel',
     author_email='dp@xientific.info',
     url='http://pysatel.googlecode.com',
     py_modules=['pysatel.coord',  'pysatel.ftpfetcher', 'pysatel.hdfdriver', 'pysatel.sqldriver',  'pysatel.util'],
-    scripts=['pysatel_admin.py'],
+    scripts=['pysatel_admin.py', 'pysatel_process.py'],
     data_files=[('/etc/', ['pysatel.conf'])],
     packages=['pysatel', 'pysatel.telemetry'])

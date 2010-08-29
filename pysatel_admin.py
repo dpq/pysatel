@@ -17,7 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from os import mkdir, chown, symlink
+from os import makedirs, chown, symlink
 import os
 from sys import argv
 import sys
@@ -26,7 +26,7 @@ from shutil import rmtree
 
 import ConfigParser
 
-from pysatel import coord, telemetry, sqldriver
+from pysatel import coord, telemetry, sqldriver, hdfdriver
 
 def helpmsg():
     """Print the help message"""
@@ -63,7 +63,7 @@ def __checkdir(directory):
     """Check if the specified path can be used as a writable directory."""
     if not os.path.exists(directory):
         try:
-            mkdir(directory)
+            makedirs(directory)
         except OSError, err:
             print "[E] Could not create directory", directory, \
                 " (errno = %s)" % err.errno
@@ -105,7 +105,7 @@ def create(src):
     if not __checkdir(dst):
         return
     # TODO Any error checks here?
-    chown(dst, uid, gid)
+    #chown(dst, uid, gid)
     
     # Create directories for raw, processed and final results
     for i in instruments.keys():
@@ -114,8 +114,9 @@ def create(src):
         chown(os.path.join(dst, i), uid, gid)
         for level in range(0, 3):
             directory = os.path.join(dst, i, "L%d" % level)
-            mkdir(directory)
-            chown(directory, uid, gid)
+            makedirs(directory)
+            #chown(directory, uid, gid)
+    
     
     # Create tables in all the required database systems
     for conn in connections:
@@ -124,8 +125,8 @@ def create(src):
             "host": config.get(conn, "Host"),
             "db": config.get(conn, "Database"),
             "user": config.get(conn, "User"),
-            "passwd": config.get(conn, "Password"),
-            "tns": config.get(conn, "TnsName")})
+            "port": config.get(conn, "Port"),
+            "passwd": config.get(conn, "Password")})
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError, \
             ConfigParser.MissingSectionHeaderError, ConfigParser.ParsingError):
             print "[E] Missing or malformed configuration file"
@@ -135,8 +136,22 @@ def create(src):
             # TODO Validate instrument name (i)
             if len(instruments[i]) > 0:
                 # Build the list of columns in the current table
-                dbase.createTable(satellitename, i, instruments[i] + coord.header())
-    
+                dbase.createtable(instruments[i] + list(coord.header()), satellitename, i)
+
+    h5 = hdfdriver.HDFDriver(dst)
+    for i in instruments.keys():
+        # TODO Validate instrument name (i)
+        if len(instruments[i]) > 0:
+            # Build the list of columns in the current table
+            h5.createtable(instruments[i] + list(coord.header()), satellitename, i)
+
+    for root, dirs, files in os.walk(dst):
+        for d in dirs:
+            os.chown(os.path.join(root, d), uid, gid)
+        for f in files:
+            os.chown(os.path.join(root, f), uid, gid)
+    os.chown(dst, uid, gid)
+
     link = os.path.join(os.path.dirname(telemetry.__file__),
         satellitename + ".py")
     if not os.path.exists(link):
@@ -147,7 +162,7 @@ def delete(satellitename):
     """Purge this satellite and its all associated data from the system."""
     # Read the config file and determine the destination directory path
     config = ConfigParser.SafeConfigParser()
-    config.read(os.path.join("/etc/pysatel.conf"))
+    config.read("/etc/pysatel.conf")
     dst = os.path.join(config.get("Main", "ArchivePath"), satellitename)
     
     # Load the SPM
@@ -190,15 +205,17 @@ def delete(satellitename):
         "host": config.get(conn, "Host"),
         "db": config.get(conn, "Database"),
         "user": config.get(conn, "User"),
-        "passwd": config.get(conn, "Password"),
-        "tns": config.get(conn, "TnsName")
-        })
+        "port": config.get(conn, "Port"),
+        "passwd": config.get(conn, "Password")})
         # TODO What if no such table exists or permission is denied?
         for i in instruments:
-            dbase.dropTable(satellitename, i)
+            try:
+                dbase.droptable(satellitename, i)
+            except:
+                pass
 
     print "Done. You can begin smashing your head against the wall if you \
-        didn't mean it."
+didn't mean it."
     return
 
 
