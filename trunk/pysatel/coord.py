@@ -44,7 +44,7 @@ f = 1 / 298.257223563
 def geodetic2ecef(lat, lon, alt):
     """Convert geodetic coordinates to ECEF."""
     lat, lon = radians(lat), radians(lon)
-    xi = sqrt(1 - esq * sin(lat))
+    xi = sqrt(1 - esq * sin(lat)*sin(lat))
     x = (a / xi + alt) * cos(lat) * cos(lon)
     y = (a / xi + alt) * cos(lat) * sin(lon)
     z = (a / xi * (1 - esq) + alt) * sin(lat)
